@@ -1,5 +1,6 @@
 enum AppPage {
-  home,
+  overview,
+  proxies,
   settings,
   dashboard,
 }

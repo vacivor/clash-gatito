@@ -1,16 +1,15 @@
-import 'dart:ui';
-
 import 'package:flutter/widgets.dart';
 import 'package:forui/forui.dart';
 
-class HomePage extends StatelessWidget {
+import 'top_glass_bar.dart';
+
+class OverviewPage extends StatelessWidget {
   final List<String> modes;
   final String selectedMode;
   final String? mainProxy;
   final String? traffic;
   final String? expire;
   final String backend;
-  final List<MapEntry<String, String>> proxyEntries;
   final Map<String, String> ipResults;
   final Map<String, Duration?> latencyResults;
   final bool ipLoading;
@@ -21,14 +20,13 @@ class HomePage extends StatelessWidget {
   final VoidCallback onRefreshLatency;
   final VoidCallback onOpenDashboard;
 
-  const HomePage({
+  const OverviewPage({
     required this.modes,
     required this.selectedMode,
     required this.mainProxy,
     required this.traffic,
     required this.expire,
     required this.backend,
-    required this.proxyEntries,
     required this.ipResults,
     required this.latencyResults,
     required this.ipLoading,
@@ -49,7 +47,7 @@ class HomePage extends StatelessWidget {
         children: [
           Positioned.fill(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 96, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -67,23 +65,6 @@ class HomePage extends StatelessWidget {
                           _buildKeyValue('Expire', expire!),
                         _buildKeyValue('Backend', backend),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FCard(
-                    title: const Text('Selected Proxies'),
-                    subtitle: Text('Showing ${proxyEntries.length} groups'),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: proxyEntries.isEmpty
-                          ? const [Text('No proxy data yet.')]
-                          : proxyEntries
-                              .take(10)
-                              .map(
-                                (entry) =>
-                                    _buildKeyValue(entry.key, entry.value),
-                              )
-                              .toList(),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -145,18 +126,6 @@ class HomePage extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            child: _TopGlassBar(
-              modes: modes,
-              selectedMode: selectedMode,
-              onModeSelected: onModeSelected,
-              onRefresh: onRefreshClash,
-              onOpenDashboard: onOpenDashboard,
-            ),
-          ),
         ],
       ),
     );
@@ -200,65 +169,5 @@ class HomePage extends StatelessWidget {
     if (ms < 500) return const Color(0xFF16A34A);
     if (ms < 1000) return const Color(0xFFF59E0B);
     return const Color(0xFFDC2626);
-  }
-}
-
-class _TopGlassBar extends StatelessWidget {
-  final List<String> modes;
-  final String selectedMode;
-  final ValueChanged<String> onModeSelected;
-  final VoidCallback onRefresh;
-  final VoidCallback onOpenDashboard;
-
-  const _TopGlassBar({
-    required this.modes,
-    required this.selectedMode,
-    required this.onModeSelected,
-    required this.onRefresh,
-    required this.onOpenDashboard,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC).withOpacity(0.78),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
-          ),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 300,
-                child: FSelect<String>(
-                  items: {for (final mode in modes) mode: mode},
-                  control: FSelectControl.lifted(
-                    value: selectedMode,
-                    onChange: (value) {
-                      if (value != null && value != selectedMode) {
-                        onModeSelected(value);
-                      }
-                    },
-                  ),
-                ),
-              ),
-              const Spacer(),
-              FButton.icon(
-                onPress: onRefresh,
-                child: const Icon(FIcons.refreshCw),
-              ),
-              const SizedBox(width: 12),
-              FButton.icon(
-                onPress: onOpenDashboard,
-                child: const Icon(FIcons.activity),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

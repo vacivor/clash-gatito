@@ -26,8 +26,14 @@ class Sidebar extends StatelessWidget {
           children: [
             _buildIconButton(
               icon: FIcons.audioLines,
-              selected: currentPage == AppPage.home,
-              onPressed: () => onSelect(AppPage.home),
+              selected: currentPage == AppPage.overview,
+              onPressed: () => onSelect(AppPage.overview),
+            ),
+            const SizedBox(height: 12),
+            _buildIconButton(
+              icon: FIcons.layoutDashboard,
+              selected: currentPage == AppPage.proxies,
+              onPressed: () => onSelect(AppPage.proxies),
             ),
             const SizedBox(height: 12),
             _buildIconButton(

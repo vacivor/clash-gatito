@@ -10,7 +10,8 @@ import 'startup_manager.dart';
 import 'ui/tray/tray_menu.dart';
 import 'ui/app_page.dart';
 import 'ui/layout/app_layout.dart';
-import 'ui/pages/home_page.dart';
+import 'ui/pages/overview_page.dart';
+import 'ui/pages/proxies_page.dart';
 import 'ui/pages/init_page.dart';
 import 'ui/pages/settings_page.dart';
 import 'ui/pages/zdashboard_page.dart';
@@ -103,7 +104,7 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
   String _clashToken = '';
   bool _settingsLoaded = false;
   String? _settingsError;
-  AppPage _currentPage = AppPage.home;
+  AppPage _currentPage = AppPage.proxies;
   bool _launchAtLogin = false;
   bool _launchAtLoginLoading = true;
   Timer? _refreshTimer;
@@ -112,6 +113,7 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
   final DiagnosticsService _diagnosticsService = DiagnosticsService();
   Map<String, String> _ipResults = {};
   Map<String, Duration?> _latencyResults = {};
+  List<ProxyGroup> _proxyGroups = [];
   bool _ipLoading = false;
   bool _latencyLoading = false;
   bool _ipLoaded = false;
@@ -402,7 +404,7 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
       _clashToken = token;
       _settingsError = null;
       if (continueToHome) {
-        _currentPage = AppPage.home;
+        _currentPage = AppPage.proxies;
       }
     });
     _rebuildClashService();
@@ -496,7 +498,7 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
       traffic: _proxiesTraffic,
       expire: _proxiesExpire,
       launchAtLogin: _launchAtLogin,
-      onShowWindow: _showHome,
+      onShowWindow: _showProxies,
       onOpenSettings: _openSettings,
       onOpenDashboard: _openDashboard,
       onRefresh: () => _refreshClashData(trayIcon),
@@ -509,7 +511,7 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
 
   void _openDashboard() {
     if (!_isConfigured) {
-      _showHome();
+      _showProxies();
       setState(() {
         _currentPage = AppPage.settings;
       });
@@ -529,10 +531,10 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
     });
   }
 
-  void _showHome() {
+  void _showProxies() {
     _showMainWindow();
     setState(() {
-      _currentPage = AppPage.home;
+      _currentPage = AppPage.proxies;
     });
     final navigator = Navigator.of(context);
     if (navigator.canPop()) {
@@ -633,6 +635,7 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
       if (proxiesMap is Map<String, dynamic>) {
         final temp = <String, List<String>>{};
         final selectedTemp = <String, String>{};
+        final groups = <ProxyGroup>[];
         final entries = _prioritizeGroupFirst(
           proxiesMap.entries.toList(),
           'Proxies',
@@ -643,6 +646,7 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
           final value = entry.value;
           if (value is Map<String, dynamic> && value['type'] == 'Selector') {
             final all = value['all'];
+            final now = value['now']?.toString();
             if (all is List) {
               final list = <String>[];
               for (final item in all) {
@@ -663,15 +667,21 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
                   _dedupePreserveOrder(list),
                 );
               }
+              groups.add(
+                ProxyGroup(
+                  name: entry.key.toString(),
+                  nodes: _dedupePreserveOrder(list),
+                  selected: now,
+                ),
+              );
             }
-            final now = value['now'];
             if (now != null) {
-              selectedTemp[entry.key] = now.toString();
+              selectedTemp[entry.key] = now;
             }
           }
         }
-        if (temp.isNotEmpty) {
-          setState(() {
+        setState(() {
+          if (temp.isNotEmpty) {
             _providerNodes
               ..clear()
               ..addAll(temp);
@@ -680,7 +690,10 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
               ..addAll(selectedTemp);
             _proxiesTraffic = traffic;
             _proxiesExpire = expire;
-          });
+          }
+          _proxyGroups = groups;
+        });
+        if (temp.isNotEmpty) {
           if (_trayIcons.isNotEmpty) {
             _refreshTrayMenu(_trayIcons.first.trayIcon);
           }
@@ -763,7 +776,7 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
           _openDashboard();
           return;
         }
-        if (page == AppPage.home) {
+        if (page == AppPage.overview) {
           _ensureDiagnosticsLoaded();
         }
         setState(() => _currentPage = page);
@@ -778,8 +791,10 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
 
   Widget _buildPageContent() {
     switch (_currentPage) {
-      case AppPage.home:
-        return _buildHomePage();
+      case AppPage.overview:
+        return _buildOverviewPage();
+      case AppPage.proxies:
+        return _buildProxiesPage();
       case AppPage.settings:
         return _buildSettingsPage();
       case AppPage.dashboard:
@@ -787,18 +802,16 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
     }
   }
 
-  Widget _buildHomePage() {
+  Widget _buildOverviewPage() {
     final selectedMain =
         _selectedProxyByGroup['GLOBAL'] ?? _selectedProxyByGroup['Proxies'];
-    final entries = _selectedProxyByGroup.entries.toList();
-    return HomePage(
+    return OverviewPage(
       modes: _modes,
       selectedMode: _selectedMode,
       mainProxy: selectedMain,
       traffic: _proxiesTraffic,
       expire: _proxiesExpire,
       backend: _isConfigured ? '$_clashHost:$_clashPort' : 'Not configured',
-      proxyEntries: entries,
       ipResults: _ipResults,
       latencyResults: _latencyResults,
       ipLoading: _ipLoading,
@@ -813,6 +826,66 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
       ),
       onRefreshIp: () => _refreshIpResults(),
       onRefreshLatency: () => _refreshLatencyResults(),
+      onOpenDashboard: _openDashboard,
+    );
+  }
+
+  Widget _buildProxiesPage() {
+    return ProxiesPage(
+      modes: _modes,
+      selectedMode: _selectedMode,
+      groups: _proxyGroups,
+      onModeSelected: (mode) {
+        if (_trayIcons.isNotEmpty) {
+          _setClashMode(mode, _trayIcons.first.trayIcon);
+        }
+      },
+      onSelectNode: (group, node) async {
+        final previousSelected = _selectedProxyByGroup[group];
+        setState(() {
+          _selectedProxyByGroup[group] = node;
+          _proxyGroups = _proxyGroups
+              .map(
+                (item) => item.name == group
+                    ? ProxyGroup(
+                        name: item.name,
+                        nodes: item.nodes,
+                        selected: node,
+                      )
+                    : item,
+              )
+              .toList();
+        });
+        if (_trayIcons.isNotEmpty) {
+          try {
+            await _setClashNode(group, node, _trayIcons.first.trayIcon);
+            await _refreshClashData(_trayIcons.first.trayIcon);
+          } catch (_) {
+            if (!mounted) return;
+            setState(() {
+              if (previousSelected == null) {
+                _selectedProxyByGroup.remove(group);
+              } else {
+                _selectedProxyByGroup[group] = previousSelected;
+              }
+              _proxyGroups = _proxyGroups
+                  .map(
+                    (item) => item.name == group
+                        ? ProxyGroup(
+                            name: item.name,
+                            nodes: item.nodes,
+                            selected: previousSelected,
+                          )
+                        : item,
+                  )
+                  .toList();
+            });
+          }
+        }
+      },
+      onRefreshClash: () => _refreshClashData(
+        _trayIcons.isNotEmpty ? _trayIcons.first.trayIcon : null,
+      ),
       onOpenDashboard: _openDashboard,
     );
   }
