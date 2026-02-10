@@ -73,8 +73,11 @@ class ClashService {
       final request = await client.openUrl(method, uri);
       request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
       if (payload != null) {
-        request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-        request.write(jsonEncode(payload));
+        request.headers.set(
+          HttpHeaders.contentTypeHeader,
+          'application/json; charset=utf-8',
+        );
+        request.add(utf8.encode(jsonEncode(payload)));
       }
       final response = await request.close();
       final body = await response.transform(utf8.decoder).join();
