@@ -3,13 +3,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../local_dashboard_server.dart';
 
-class ZDashboardPage extends StatefulWidget {
+class ZashboardPage extends StatefulWidget {
   final String host;
   final int port;
   final String secret;
   final bool useLocalServer;
 
-  const ZDashboardPage({
+  const ZashboardPage({
     super.key,
     required this.host,
     required this.port,
@@ -18,10 +18,10 @@ class ZDashboardPage extends StatefulWidget {
   });
 
   @override
-  State<ZDashboardPage> createState() => _ZDashboardPageState();
+  State<ZashboardPage> createState() => _ZashboardPageState();
 }
 
-class _ZDashboardPageState extends State<ZDashboardPage> {
+class _ZashboardPageState extends State<ZashboardPage> {
   late final WebViewController _controller;
   final LocalDashboardServer _server = LocalDashboardServer();
   bool _isLoading = true;
@@ -64,12 +64,12 @@ class _ZDashboardPageState extends State<ZDashboardPage> {
     if (widget.useLocalServer) {
       final uri = await _server.start();
       _currentUrl = uri.toString();
-      debugPrint('ZDashboard URL: $_currentUrl');
+      debugPrint('Zashboard URL: $_currentUrl');
       await _controller.loadRequest(uri);
       return;
     }
     _currentUrl = widget.buildSetupUrl().toString();
-    debugPrint('ZDashboard URL: $_currentUrl');
+    debugPrint('Zashboard URL: $_currentUrl');
     await _controller.loadRequest(Uri.parse(_currentUrl!));
   }
 
@@ -93,7 +93,7 @@ class _ZDashboardPageState extends State<ZDashboardPage> {
   }
 }
 
-extension ZDashboardSetup on ZDashboardPage {
+extension ZDashboardSetup on ZashboardPage {
   Uri buildSetupUrl() {
     final host = this.host;
     final port = this.port;

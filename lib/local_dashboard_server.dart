@@ -7,7 +7,7 @@ class LocalDashboardServer {
   final String assetsPrefix;
   HttpServer? _server;
 
-  LocalDashboardServer({this.assetsPrefix = 'assets/zdashboard/'});
+  LocalDashboardServer({this.assetsPrefix = 'assets/zashboard/'});
 
   Future<Uri> start() async {
     if (_server != null) {

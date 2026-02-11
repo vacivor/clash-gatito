@@ -66,8 +66,8 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/tray_icon.png
-    - assets/zdashboard/
-    - assets/zdashboard/assets/
+    - assets/zashboard/
+    - assets/zashboard/assets/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

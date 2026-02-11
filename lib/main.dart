@@ -14,7 +14,7 @@ import 'ui/pages/overview_page.dart';
 import 'ui/pages/proxies_page.dart';
 import 'ui/pages/init_page.dart';
 import 'ui/pages/settings_page.dart';
-import 'ui/pages/zdashboard_page.dart';
+import 'ui/pages/zashboard_page.dart';
 
 class TrayIconData {
   final int id;
@@ -912,7 +912,7 @@ class _TrayIconExamplePageState extends State<TrayIconExamplePage> {
     if (!_isConfigured) {
       return const Center(child: Text('Please configure host/port/secret.'));
     }
-    return ZDashboardPage(
+    return ZashboardPage(
       useLocalServer: false,
       host: _clashHost,
       port: _clashPort,
