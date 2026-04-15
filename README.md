@@ -90,7 +90,7 @@ Current IP providers:
 - `IPIFY`
 
 These checks are not routed through the backend controller API. They reflect the
-network environment of the machine running `Clash Gatito Tray`.
+network environment of the machine running `Clash Gatito`.
 
 ## Run From Source
 

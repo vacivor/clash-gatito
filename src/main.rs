@@ -30,6 +30,9 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy}
 use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
 use winit::window::WindowId;
 
+const MAX_TRAY_RETRY_ATTEMPTS: u32 = 5;
+const MAX_TRAY_RETRY_DELAY_SECONDS: u64 = 8;
+
 enum UserEvent {
     Menu(MenuEvent),
     Tray(TrayIconEvent),
@@ -54,6 +57,8 @@ struct App {
     last_error: Option<String>,
     refresh_in_flight: bool,
     next_refresh_at: Instant,
+    next_tray_retry_at: Option<Instant>,
+    tray_retry_attempts: u32,
 }
 
 impl App {
@@ -72,26 +77,65 @@ impl App {
             last_error: None,
             refresh_in_flight: false,
             next_refresh_at: Instant::now(),
+            next_tray_retry_at: None,
+            tray_retry_attempts: 0,
         }
     }
 
-    fn init(&mut self) {
+    fn init(&mut self, event_loop: &ActiveEventLoop) {
         if let Err(error) = config::ensure_config_exists() {
             self.last_error = Some(error.to_string());
             self.last_status = "Failed to prepare config".to_string();
         }
 
         self.rebuild_menu();
-
-        match build_tray(self.menu.clone()) {
-            Ok(tray) => self.tray = Some(tray),
-            Err(error) => {
-                self.last_error = Some(error.to_string());
-                self.last_status = "Failed to create tray icon".to_string();
-            }
-        }
+        self.try_build_tray(event_loop);
 
         self.start_refresh("startup");
+    }
+
+    fn try_build_tray(&mut self, event_loop: &ActiveEventLoop) {
+        if self.tray.is_some() {
+            self.next_tray_retry_at = None;
+            self.tray_retry_attempts = 0;
+            return;
+        }
+
+        match build_tray(self.menu.clone()) {
+            Ok(tray) => {
+                self.tray = Some(tray);
+                self.next_tray_retry_at = None;
+                self.tray_retry_attempts = 0;
+                self.last_error = None;
+                if self.last_status == "Failed to create tray icon" {
+                    self.last_status = "Tray icon restored".to_string();
+                }
+                self.rebuild_menu();
+            }
+            Err(error) => {
+                let message = error.to_string();
+                eprintln!("failed to create tray icon: {message}");
+                self.last_error = Some(message);
+                self.tray_retry_attempts = self.tray_retry_attempts.saturating_add(1);
+
+                if self.tray_retry_attempts >= MAX_TRAY_RETRY_ATTEMPTS {
+                    self.last_status = "Tray icon failed to start; exiting".to_string();
+                    self.next_tray_retry_at = None;
+                    self.rebuild_menu();
+                    event_loop.exit();
+                    return;
+                }
+
+                let delay_seconds =
+                    (1_u64 << (self.tray_retry_attempts - 1)).min(MAX_TRAY_RETRY_DELAY_SECONDS);
+                self.last_status = format!(
+                    "Failed to create tray icon (retry {}/{} in {}s)",
+                    self.tray_retry_attempts, MAX_TRAY_RETRY_ATTEMPTS, delay_seconds
+                );
+                self.next_tray_retry_at = Some(Instant::now() + Duration::from_secs(delay_seconds));
+                self.rebuild_menu();
+            }
+        }
     }
 
     fn start_refresh(&mut self, reason: &'static str) {
@@ -498,7 +542,9 @@ impl App {
 }
 
 impl ApplicationHandler<UserEvent> for App {
-    fn resumed(&mut self, _event_loop: &ActiveEventLoop) {}
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        self.try_build_tray(event_loop);
+    }
 
     fn window_event(
         &mut self,
@@ -508,10 +554,16 @@ impl ApplicationHandler<UserEvent> for App {
     ) {
     }
 
-    fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
+    fn new_events(&mut self, event_loop: &ActiveEventLoop, cause: StartCause) {
         match cause {
-            StartCause::Init => self.init(),
+            StartCause::Init => self.init(event_loop),
             StartCause::ResumeTimeReached { .. } => {
+                if self
+                    .next_tray_retry_at
+                    .is_some_and(|retry_at| Instant::now() >= retry_at)
+                {
+                    self.try_build_tray(event_loop);
+                }
                 if Instant::now() >= self.next_refresh_at {
                     self.start_refresh("auto refresh");
                 }
@@ -533,7 +585,11 @@ impl ApplicationHandler<UserEvent> for App {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        event_loop.set_control_flow(ControlFlow::WaitUntil(self.next_refresh_at));
+        let next_wake_at = self
+            .next_tray_retry_at
+            .map(|retry_at| retry_at.min(self.next_refresh_at))
+            .unwrap_or(self.next_refresh_at);
+        event_loop.set_control_flow(ControlFlow::WaitUntil(next_wake_at));
     }
 }
 

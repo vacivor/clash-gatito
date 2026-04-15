@@ -1,7 +1,7 @@
 use std::env;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder, menu::Menu};
@@ -20,7 +20,7 @@ pub fn build_tray(menu: Menu) -> Result<TrayIcon> {
 }
 
 fn build_icon() -> Result<Icon> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tray_icon.png");
+    let path = resolve_tray_icon_path()?;
     let file = File::open(&path).with_context(|| format!("open {}", path.display()))?;
     let decoder = png::Decoder::new(BufReader::new(file));
     let mut reader = decoder
@@ -64,6 +64,28 @@ fn build_icon() -> Result<Icon> {
     };
 
     Icon::from_rgba(rgba, info.width, info.height).context("create tray icon from png")
+}
+
+fn resolve_tray_icon_path() -> Result<PathBuf> {
+    let mut candidates = Vec::new();
+
+    if let Ok(current_exe) = env::current_exe() {
+        if let Some(exe_dir) = current_exe.parent() {
+            candidates.push(exe_dir.join("tray_icon.png"));
+
+            #[cfg(target_os = "macos")]
+            if let Some(contents_dir) = exe_dir.parent() {
+                candidates.push(contents_dir.join("Resources").join("tray_icon.png"));
+            }
+        }
+    }
+
+    candidates.push(Path::new(env!("CARGO_MANIFEST_DIR")).join("tray_icon.png"));
+
+    candidates
+        .into_iter()
+        .find(|path| path.is_file())
+        .ok_or_else(|| anyhow!("could not locate tray_icon.png in runtime search paths"))
 }
 
 pub fn clear_menu(menu: &Menu) {

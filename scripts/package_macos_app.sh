@@ -41,6 +41,10 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$ROOT_DIR/target/release/$BIN_NAME" "$MACOS_DIR/$EXECUTABLE_NAME"
 chmod +x "$MACOS_DIR/$EXECUTABLE_NAME"
 
+if [[ -f "$ROOT_DIR/tray_icon.png" ]]; then
+  cp "$ROOT_DIR/tray_icon.png" "$RESOURCES_DIR/tray_icon.png"
+fi
+
 ICON_NAME=""
 if [[ -f "$PREBUILT_ICNS_SOURCE" ]]; then
   cp "$PREBUILT_ICNS_SOURCE" "$RESOURCES_DIR/AppIcon.icns"
