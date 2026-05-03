@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, anyhow};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder, menu::Menu};
 
-use crate::constants::APP_NAME;
+use crate::constants::{APP_ID_PREFIX, APP_NAME};
 
 pub fn build_tray(menu: Menu) -> Result<TrayIcon> {
     let icon = build_icon()?;
@@ -79,6 +79,19 @@ fn resolve_tray_icon_path() -> Result<PathBuf> {
             }
         }
     }
+
+    #[cfg(target_os = "linux")]
+    candidates.push(
+        Path::new("/usr/share")
+            .join(APP_ID_PREFIX)
+            .join("tray_icon.png"),
+    );
+    #[cfg(target_os = "linux")]
+    candidates.push(
+        Path::new("/app/share")
+            .join(APP_ID_PREFIX)
+            .join("tray_icon.png"),
+    );
 
     candidates.push(Path::new(env!("CARGO_MANIFEST_DIR")).join("tray_icon.png"));
 

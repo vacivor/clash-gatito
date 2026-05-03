@@ -17,6 +17,39 @@ SVG_ICON_SOURCE="$ROOT_DIR/app_icon.svg"
 GENERATED_ICON_SOURCE="$ROOT_DIR/output/app_icon.png"
 QLMANAGE_ICON_SOURCE="$ROOT_DIR/output/app_icon.svg.png"
 PREBUILT_ICNS_SOURCE="$ROOT_DIR/output/AppIcon.icns"
+BUILD_RELEASE=1
+
+usage() {
+  cat <<USAGE
+Usage: $0 [--no-build]
+
+Build a native macOS .app bundle for ${APP_NAME}.
+
+Arguments:
+  --no-build  Reuse target/release/${BIN_NAME} instead of running cargo build
+  -h, --help  Show this help
+USAGE
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --no-build)
+      BUILD_RELEASE=0
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "error: unknown argument: $arg" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+mkdir -p "$ROOT_DIR/output"
+
 if [[ ! -f "$ICON_SOURCE" ]]; then
   if [[ -f "$SVG_ICON_SOURCE" ]]; then
     qlmanage -t -s 1024 -o "$ROOT_DIR/output" "$SVG_ICON_SOURCE" >/dev/null
@@ -33,7 +66,12 @@ fi
 VERSION="$(awk -F ' = ' '/^version = / { gsub(/"/, "", $2); print $2; exit }' "$ROOT_DIR/Cargo.toml")"
 
 cd "$ROOT_DIR"
-cargo build --release
+if [[ "$BUILD_RELEASE" -eq 1 ]]; then
+  cargo build --release
+elif [[ ! -x "$ROOT_DIR/target/release/$BIN_NAME" ]]; then
+  echo "error: missing release binary: $ROOT_DIR/target/release/$BIN_NAME" >&2
+  exit 1
+fi
 
 rm -rf "$APP_DIR" "$ICONSET_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"

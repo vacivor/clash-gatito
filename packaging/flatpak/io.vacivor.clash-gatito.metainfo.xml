@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.vacivor.clash-gatito</id>
+  <name>Clash Gatito</name>
+  <summary>Tray-only controller for Mihomo / Clash compatible backends</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      Clash Gatito is a lightweight tray-only desktop controller for
+      Mihomo / Clash-compatible external controllers.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.vacivor.clash-gatito.desktop</launchable>
+  <url type="homepage">https://github.com/vacivor/clash-gatito</url>
+</component>

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Clash Gatito
+Comment=Tray-only controller for Mihomo / Clash compatible backends
+Exec=clash-gatito
+Icon=io.vacivor.clash-gatito
+Terminal=false
+Categories=Network;
+StartupNotify=false

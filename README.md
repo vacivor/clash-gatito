@@ -109,6 +109,24 @@ Release output:
 - macOS / Linux: `target/release/clash-gatito`
 - Windows: `target\release\clash-gatito.exe`
 
+## Release Packages
+
+Release packages are built by GitHub Actions when pushing a `v*` tag, or by
+manually running the `Release Packages` workflow.
+
+Current artifacts:
+
+- Linux amd64 / aarch64: `.deb`, `.rpm`, `.tar.gz`
+- Linux amd64 / aarch64: `.flatpak`
+- macOS amd64 / arm64: `.app.zip`
+- Windows amd64: `.zip`
+
+The user-facing application name is `Clash Gatito`. Package names, executable
+commands, and config directories use `clash-gatito` where platforms expect a
+lowercase identifier.
+
+Linux builds are Wayland-only and do not request X11 access in Flatpak.
+
 ## macOS App Bundle
 
 Build a native `.app` bundle on macOS:
@@ -130,12 +148,40 @@ Notes:
 - `LSUIElement` is enabled, so the app runs as a tray-only app without a Dock
   icon.
 
+## Local Linux Packages
+
+Build native `.deb` and `.rpm` packages locally on Linux:
+
+```bash
+./scripts/package_linux.sh
+```
+
+Build only one package format:
+
+```bash
+./scripts/package_linux.sh deb
+./scripts/package_linux.sh rpm
+```
+
+Output:
+
+- `output/linux/clash-gatito_<version>-<release>_<arch>.deb`
+- `output/linux/clash-gatito-<version>-<release>.<arch>.rpm`
+
+Notes:
+
+- The script builds the Rust binary in release mode before packaging.
+- Use `--no-build` to package an existing `target/release/clash-gatito`.
+- Set `RELEASE=2` to override the package release number.
+- `dpkg-deb` is required for `.deb` packages.
+- `rpmbuild` is required for `.rpm` packages.
+
 ## Linux Notes
 
 `tray-icon` depends on GTK/AppIndicator on Linux. Typical packages:
 
-- Debian/Ubuntu: `libgtk-3-dev libxdo-dev libappindicator3-dev`
-- Arch: `gtk3 xdotool libappindicator-gtk3`
+- Debian/Ubuntu: `pkg-config libglib2.0-dev libgtk-3-dev libayatana-appindicator3-dev`
+- Arch: `pkgconf gtk3 libappindicator-gtk3`
 
 Depending on your desktop environment, additional AppIndicator compatibility
 packages may be needed.

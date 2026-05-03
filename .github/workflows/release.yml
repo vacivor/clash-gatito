@@ -1,0 +1,163 @@
+name: Release Packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux-packages:
+    name: Linux packages (${{ matrix.artifact_arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            artifact_arch: amd64
+          - runner: ubuntu-24.04-arm
+            artifact_arch: aarch64
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: make ci-install-rust
+
+      - name: Install Linux build dependencies
+        run: make ci-install-linux-deps
+
+      - name: Build Linux packages
+        run: make ci-linux-packages DIST_ARCH=${{ matrix.artifact_arch }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clash-gatito-linux-${{ matrix.artifact_arch }}
+          path: |
+            output/linux/*.deb
+            output/linux/*.rpm
+            output/linux/*.tar.gz
+          if-no-files-found: error
+
+  flatpak:
+    name: Flatpak (${{ matrix.flatpak_arch }})
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
+      options: --privileged
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            flatpak_arch: x86_64
+          - runner: ubuntu-24.04-arm
+            flatpak_arch: aarch64
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust for vendoring
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Prepare Flatpak sources
+        run: make ci-flatpak-prep
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: clash-gatito-${{ matrix.flatpak_arch }}.flatpak
+          manifest-path: packaging/flatpak/io.vacivor.clash-gatito.yml
+          arch: ${{ matrix.flatpak_arch }}
+          cache-key: flatpak-${{ matrix.flatpak_arch }}-${{ github.sha }}
+          upload-artifact: false
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clash-gatito-flatpak-${{ matrix.flatpak_arch }}
+          path: clash-gatito-${{ matrix.flatpak_arch }}.flatpak
+          if-no-files-found: error
+
+  macos:
+    name: macOS app (${{ matrix.artifact_arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            artifact_arch: amd64
+          - runner: macos-15
+            artifact_arch: arm64
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: make ci-install-rust
+
+      - name: Build macOS app zip
+        run: make package-macos-zip DIST_ARCH=${{ matrix.artifact_arch }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clash-gatito-macos-${{ matrix.artifact_arch }}
+          path: output/*.zip
+          if-no-files-found: error
+
+  windows:
+    name: Windows zip (${{ matrix.artifact_arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            artifact_arch: amd64
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Make
+        shell: pwsh
+        run: choco install make -y
+
+      - name: Install Rust
+        run: make ci-install-rust
+
+      - name: Build Windows zip
+        run: make ci-windows-package DIST_ARCH=${{ matrix.artifact_arch }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clash-gatito-windows-${{ matrix.artifact_arch }}
+          path: output/windows/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs:
+      - linux-packages
+      - flatpak
+      - macos
+      - windows
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List release assets
+        run: find dist -maxdepth 1 -type f -print | sort
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
