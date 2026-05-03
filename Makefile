@@ -6,9 +6,8 @@ OUTPUT_DIR := output
 LINUX_OUTPUT_DIR := $(OUTPUT_DIR)/linux
 WINDOWS_OUTPUT_DIR := $(OUTPUT_DIR)/windows
 LINUX_DIST_DIR := $(LINUX_OUTPUT_DIR)/$(PACKAGE_NAME)-$(VERSION)-linux-$(DIST_ARCH)
-LINUX_DEPS_REPORT := $(LINUX_OUTPUT_DIR)/$(PACKAGE_NAME)-$(VERSION)-linux-$(DIST_ARCH)-dependencies.txt
 
-.PHONY: build-release package-linux package-linux-tar package-linux-deps-report package-macos package-macos-zip package-macos-dmg package-windows-zip ci-install-rust ci-install-linux-deps ci-linux-packages ci-windows-package ci-flatpak-prep
+.PHONY: build-release package-linux package-linux-tar package-macos package-macos-zip package-macos-dmg package-windows-zip ci-install-rust ci-install-linux-deps ci-linux-packages ci-windows-package ci-flatpak-prep
 
 build-release:
 	cargo build --release --locked
@@ -26,10 +25,6 @@ package-linux-tar: build-release
 	install -m 644 LICENSE "$(LINUX_DIST_DIR)/LICENSE"
 	install -m 644 README.md "$(LINUX_DIST_DIR)/README.md"
 	tar -C "$(LINUX_OUTPUT_DIR)" -czf "$(LINUX_DIST_DIR).tar.gz" "$(notdir $(LINUX_DIST_DIR))"
-
-package-linux-deps-report: build-release
-	mkdir -p "$(LINUX_OUTPUT_DIR)"
-	{ echo "ldd target/release/$(PACKAGE_NAME)"; ldd target/release/$(PACKAGE_NAME); echo; echo "readelf -d target/release/$(PACKAGE_NAME)"; readelf -d target/release/$(PACKAGE_NAME) | grep NEEDED || true; } > "$(LINUX_DEPS_REPORT)"
 
 package-macos: build-release
 	./scripts/package_macos_app.sh --no-build
@@ -52,7 +47,7 @@ ci-install-linux-deps:
 	sudo apt-get install -y pkg-config libglib2.0-dev libgtk-3-dev rpm desktop-file-utils hicolor-icon-theme
 	sudo apt-get install -y libayatana-appindicator3-dev || sudo apt-get install -y libappindicator3-dev
 
-ci-linux-packages: package-linux package-linux-tar package-linux-deps-report
+ci-linux-packages: package-linux package-linux-tar
 
 ci-windows-package: package-windows-zip
 

@@ -54,12 +54,6 @@ jobs:
           path: output/linux/*.tar.gz
           if-no-files-found: error
 
-      - uses: actions/upload-artifact@v7
-        with:
-          name: clash-gatito-linux-deps-${{ matrix.artifact_arch }}
-          path: output/linux/*-dependencies.txt
-          if-no-files-found: error
-
   flatpak:
     name: Flatpak (${{ matrix.flatpak_arch }})
     runs-on: ${{ matrix.runner }}
