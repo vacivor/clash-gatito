@@ -29,7 +29,6 @@ modules:
       - install -Dm755 target/release/clash-gatito /app/bin/clash-gatito
       - install -Dm644 tray_icon.png /app/share/clash-gatito/tray_icon.png
       - install -Dm644 app_icon.png /app/share/clash-gatito/app_icon.png
-      - install -Dm644 app_icon_512.png /app/share/icons/hicolor/512x512/apps/io.vacivor.clash-gatito.png
       - install -Dm644 app_icon.svg /app/share/icons/hicolor/scalable/apps/io.vacivor.clash-gatito.svg
       - install -Dm644 packaging/flatpak/io.vacivor.clash-gatito.desktop /app/share/applications/io.vacivor.clash-gatito.desktop
       - install -Dm644 packaging/flatpak/io.vacivor.clash-gatito.metainfo.xml /app/share/metainfo/io.vacivor.clash-gatito.metainfo.xml

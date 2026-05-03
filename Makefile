@@ -59,6 +59,5 @@ ci-windows-package: package-windows-zip
 ci-flatpak-prep:
 	mkdir -p .cargo
 	cargo vendor vendor > .cargo/config.toml
-	if command -v magick >/dev/null 2>&1; then magick app_icon.png -resize 512x512 app_icon_512.png; else convert app_icon.png -resize 512x512 app_icon_512.png; fi
 	rm -rf shared-modules
 	git clone --depth 1 https://github.com/flathub/shared-modules.git shared-modules

@@ -594,6 +594,12 @@ impl ApplicationHandler<UserEvent> for App {
 }
 
 fn main() {
+    #[cfg(target_os = "linux")]
+    if let Err(error) = gtk::init() {
+        eprintln!("failed to initialize GTK: {error}");
+        std::process::exit(1);
+    }
+
     let mut builder = EventLoop::<UserEvent>::with_user_event();
     #[cfg(target_os = "macos")]
     {
