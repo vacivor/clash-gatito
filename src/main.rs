@@ -245,45 +245,12 @@ impl App {
             let _ = self.menu.append(&mode_menu);
 
             let proxies_menu = Submenu::new("Proxies", true);
-            for group in &snapshot.groups {
-                let group_menu = Submenu::new(&group.name, true);
-                let test_group = MenuItem::with_id(
-                    format!(
-                        "{APP_ID_PREFIX}:test-group:{}",
-                        encode_component(&group.name)
-                    ),
-                    "Test Group",
-                    true,
-                    None,
-                );
-                let _ = group_menu.append(&test_group);
-                let _ = group_menu.append(&PredefinedMenuItem::separator());
-                for node in &group.nodes {
-                    let label = self
-                        .group_latencies
-                        .get(&group.name)
-                        .and_then(|latencies| latencies.get(node))
-                        .or_else(|| self.node_latencies.get(node))
-                        .map(|latency| match latency {
-                            Some(ms) => format!("{node} ({ms}ms)"),
-                            None => format!("{node} (timeout)"),
-                        })
-                        .unwrap_or_else(|| node.clone());
-                    let item = CheckMenuItem::with_id(
-                        format!(
-                            "{APP_ID_PREFIX}:proxy:{}:{}",
-                            encode_component(&group.name),
-                            encode_component(node)
-                        ),
-                        label,
-                        true,
-                        group.selected.as_deref() == Some(node.as_str()),
-                        None,
-                    );
-                    let _ = group_menu.append(&item);
-                }
-                let _ = proxies_menu.append(&group_menu);
-            }
+            append_proxy_items(
+                &proxies_menu,
+                snapshot,
+                &self.group_latencies,
+                &self.node_latencies,
+            );
             let _ = self.menu.append(&proxies_menu);
 
             let network_menu = Submenu::new("Network", true);
@@ -542,6 +509,116 @@ impl App {
             }
         }
     }
+}
+
+fn append_proxy_items(
+    proxies_menu: &Submenu,
+    snapshot: &ClashSnapshot,
+    group_latencies: &HashMap<String, HashMap<String, Option<u64>>>,
+    node_latencies: &HashMap<String, Option<u64>>,
+) {
+    for group in &snapshot.groups {
+        append_proxy_group_items(proxies_menu, group, group_latencies, node_latencies);
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn append_proxy_group_items(
+    proxies_menu: &Submenu,
+    group: &models::ProxyGroup,
+    group_latencies: &HashMap<String, HashMap<String, Option<u64>>>,
+    node_latencies: &HashMap<String, Option<u64>>,
+) {
+    let group_menu = Submenu::new(&group.name, true);
+    let test_group = MenuItem::with_id(
+        format!(
+            "{APP_ID_PREFIX}:test-group:{}",
+            encode_component(&group.name)
+        ),
+        "Test Group",
+        true,
+        None,
+    );
+    let _ = group_menu.append(&test_group);
+    let _ = group_menu.append(&PredefinedMenuItem::separator());
+
+    for node in &group.nodes {
+        let item = build_proxy_item(group, node, group_latencies, node_latencies, false);
+        let _ = group_menu.append(&item);
+    }
+
+    let _ = proxies_menu.append(&group_menu);
+}
+
+#[cfg(target_os = "linux")]
+fn append_proxy_group_items(
+    proxies_menu: &Submenu,
+    group: &models::ProxyGroup,
+    group_latencies: &HashMap<String, HashMap<String, Option<u64>>>,
+    node_latencies: &HashMap<String, Option<u64>>,
+) {
+    let group_label = MenuItem::with_id(
+        format!(
+            "{APP_ID_PREFIX}:info:proxy-group:{}",
+            encode_component(&group.name)
+        ),
+        format!("{}:", group.name),
+        false,
+        None,
+    );
+    let test_group = MenuItem::with_id(
+        format!(
+            "{APP_ID_PREFIX}:test-group:{}",
+            encode_component(&group.name)
+        ),
+        format!("Test {}", group.name),
+        true,
+        None,
+    );
+    let _ = proxies_menu.append(&group_label);
+    let _ = proxies_menu.append(&test_group);
+
+    for node in &group.nodes {
+        let item = build_proxy_item(group, node, group_latencies, node_latencies, true);
+        let _ = proxies_menu.append(&item);
+    }
+
+    let _ = proxies_menu.append(&PredefinedMenuItem::separator());
+}
+
+fn build_proxy_item(
+    group: &models::ProxyGroup,
+    node: &str,
+    group_latencies: &HashMap<String, HashMap<String, Option<u64>>>,
+    node_latencies: &HashMap<String, Option<u64>>,
+    include_group_name: bool,
+) -> CheckMenuItem {
+    let label = group_latencies
+        .get(&group.name)
+        .and_then(|latencies| latencies.get(node))
+        .or_else(|| node_latencies.get(node))
+        .map(|latency| match latency {
+            Some(ms) => format!("{node} ({ms}ms)"),
+            None => format!("{node} (timeout)"),
+        })
+        .unwrap_or_else(|| node.to_string());
+    let label = if include_group_name {
+        format!("{} / {label}", group.name)
+    } else {
+        label
+    };
+
+    CheckMenuItem::with_id(
+        format!(
+            "{APP_ID_PREFIX}:proxy:{}:{}",
+            encode_component(&group.name),
+            encode_component(node)
+        ),
+        label,
+        true,
+        group.selected.as_deref() == Some(node),
+        None,
+    )
 }
 
 impl ApplicationHandler<UserEvent> for App {

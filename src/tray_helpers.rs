@@ -13,7 +13,6 @@ pub fn build_tray(menu: Menu) -> Result<TrayIcon> {
     let builder = TrayIconBuilder::new()
         .with_menu(Box::new(menu))
         .with_tooltip(APP_NAME)
-        .with_title(APP_NAME)
         .with_icon(icon);
     #[cfg(target_os = "macos")]
     let builder = builder.with_icon_as_template(true);
@@ -33,7 +32,7 @@ fn build_icon() -> Result<Icon> {
         .with_context(|| format!("decode png frame from {}", path.display()))?;
 
     let bytes = &buf[..info.buffer_size()];
-    let rgba = match info.color_type {
+    let mut rgba = match info.color_type {
         png::ColorType::Rgba => bytes.to_vec(),
         png::ColorType::Rgb => {
             let mut rgba = Vec::with_capacity((info.width * info.height * 4) as usize);
@@ -64,8 +63,24 @@ fn build_icon() -> Result<Icon> {
         }
     };
 
+    tint_linux_tray_icon(&mut rgba);
+
     Icon::from_rgba(rgba, info.width, info.height).context("create tray icon from png")
 }
+
+#[cfg(target_os = "linux")]
+fn tint_linux_tray_icon(rgba: &mut [u8]) {
+    for pixel in rgba.chunks_exact_mut(4) {
+        if pixel[3] > 0 {
+            pixel[0] = 255;
+            pixel[1] = 255;
+            pixel[2] = 255;
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn tint_linux_tray_icon(_rgba: &mut [u8]) {}
 
 fn resolve_tray_icon_path() -> Result<PathBuf> {
     let mut candidates = Vec::new();
