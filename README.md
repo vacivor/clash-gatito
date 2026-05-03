@@ -118,7 +118,7 @@ Current artifacts:
 
 - Linux amd64 / aarch64: `.deb`, `.rpm`, `.tar.gz`
 - Linux amd64 / aarch64: `.flatpak`
-- macOS amd64 / arm64: `.app.zip`
+- macOS amd64 / arm64: `.app.zip`, `.dmg`
 - Windows amd64: `.zip`
 
 The user-facing application name is `Clash Gatito`. Package names, executable

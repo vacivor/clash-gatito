@@ -38,11 +38,26 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: clash-gatito-linux-${{ matrix.artifact_arch }}
-          path: |
-            output/linux/*.deb
-            output/linux/*.rpm
-            output/linux/*.tar.gz
+          name: clash-gatito-linux-deb-${{ matrix.artifact_arch }}
+          path: output/linux/*.deb
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clash-gatito-linux-rpm-${{ matrix.artifact_arch }}
+          path: output/linux/*.rpm
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clash-gatito-linux-tar-${{ matrix.artifact_arch }}
+          path: output/linux/*.tar.gz
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clash-gatito-linux-deps-${{ matrix.artifact_arch }}
+          path: output/linux/*-dependencies.txt
           if-no-files-found: error
 
   flatpak:
@@ -101,13 +116,15 @@ jobs:
       - name: Install Rust
         run: make ci-install-rust
 
-      - name: Build macOS app zip
-        run: make package-macos-zip DIST_ARCH=${{ matrix.artifact_arch }}
+      - name: Build macOS app zip and dmg
+        run: make package-macos-zip package-macos-dmg DIST_ARCH=${{ matrix.artifact_arch }}
 
       - uses: actions/upload-artifact@v7
         with:
           name: clash-gatito-macos-${{ matrix.artifact_arch }}
-          path: output/*.zip
+          path: |
+            output/*.zip
+            output/*.dmg
           if-no-files-found: error
 
   windows:

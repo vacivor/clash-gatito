@@ -163,7 +163,7 @@ Section: net
 Priority: optional
 Architecture: $arch
 Maintainer: $MAINTAINER
-Depends: ca-certificates, xdg-utils, libgtk-3-0, libayatana-appindicator3-1 | libappindicator3-1
+Depends: ca-certificates, xdg-utils, libgtk-3-0, libayatana-appindicator3-1, libwayland-client0, libxkbcommon0
 Description: $SUMMARY
  Clash Gatito is a lightweight desktop tray app for controlling
  Mihomo / Clash-compatible external controllers.
@@ -236,7 +236,9 @@ URL:            https://github.com/vacivor/clash-gatito
 Requires:       ca-certificates
 Requires:       xdg-utils
 Requires:       gtk3
-Requires:       libappindicator-gtk3
+Requires:       libayatana-appindicator-gtk3
+Requires:       libwayland-client
+Requires:       libxkbcommon
 Requires:       hicolor-icon-theme
 
 %description
