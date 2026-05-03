@@ -32,6 +32,8 @@ use winit::window::WindowId;
 
 const MAX_TRAY_RETRY_ATTEMPTS: u32 = 5;
 const MAX_TRAY_RETRY_DELAY_SECONDS: u64 = 8;
+#[cfg(target_os = "linux")]
+const GTK_EVENT_PUMP_INTERVAL: Duration = Duration::from_millis(100);
 
 enum UserEvent {
     Menu(MenuEvent),
@@ -104,6 +106,7 @@ impl App {
         match build_tray(self.menu.clone()) {
             Ok(tray) => {
                 self.tray = Some(tray);
+                pump_platform_events();
                 self.next_tray_retry_at = None;
                 self.tray_retry_attempts = 0;
                 self.last_error = None;
@@ -585,13 +588,28 @@ impl ApplicationHandler<UserEvent> for App {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        pump_platform_events();
+
         let next_wake_at = self
             .next_tray_retry_at
             .map(|retry_at| retry_at.min(self.next_refresh_at))
             .unwrap_or(self.next_refresh_at);
+        #[cfg(target_os = "linux")]
+        let next_wake_at = next_wake_at.min(Instant::now() + GTK_EVENT_PUMP_INTERVAL);
         event_loop.set_control_flow(ControlFlow::WaitUntil(next_wake_at));
     }
 }
+
+#[cfg(target_os = "linux")]
+fn pump_platform_events() {
+    let context = gtk::glib::MainContext::default();
+    while context.pending() {
+        context.iteration(false);
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn pump_platform_events() {}
 
 fn main() {
     #[cfg(target_os = "linux")]

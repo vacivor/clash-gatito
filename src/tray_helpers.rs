@@ -13,6 +13,7 @@ pub fn build_tray(menu: Menu) -> Result<TrayIcon> {
     let builder = TrayIconBuilder::new()
         .with_menu(Box::new(menu))
         .with_tooltip(APP_NAME)
+        .with_title(APP_NAME)
         .with_icon(icon);
     #[cfg(target_os = "macos")]
     let builder = builder.with_icon_as_template(true);
